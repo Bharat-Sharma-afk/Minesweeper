@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import './tilegrid.dart';
 import 'dart:math';
@@ -11,12 +13,11 @@ class App extends StatefulWidget {
 }
 
 class AppState extends State<App> {
-  int size = 10;
-  int sizex = 10;
+  int sizex = 14;
   int sizey = 10;
-  int mines = 10;
-  var board, tileGrid;
-  var ctext, tilesRem;
+  int mines = 15;
+  var board, tileGrid, iPane;
+  var ctext;
 
   gameEndDialog(type) {
     showDialog<String>(
@@ -50,96 +51,86 @@ class AppState extends State<App> {
     super.initState();
   }
 
-  var _flagging = 0;
-  ChangeFlagging() {
-    setState(() {
-      _flagging += 1;
-      _flagging = (_flagging % 2);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     ctext = context;
     return Material(
         child: Container(
-            color: Colors.black38,
-            child: Column(children: [
-              Spacer(),
-              Container(
-                  child: const Text(
-                "Minesweeper",
-                style: TextStyle(
-                    fontFamily: "Cursive", color: Colors.black, fontSize: 50),
-              )),
-              const Spacer(),
-              Container(
-                  child: Row(children: [
-                const Spacer(),
-                const Text("Mines: 10"),
-                Spacer(),
-                ElevatedButton(
-                  onPressed: ChangeFlagging,
-                  child: (_flagging == 1)
-                      ? Image.asset(
-                          "images/flag.ico",
-                          height: 50,
-                          width: 50,
-                        )
-                      : Image.asset(
-                          "images/mine.ico",
-                          height: 50,
-                          width: 50,
-                        ),
-                  style: ElevatedButton.styleFrom(
-                      shape: CircleBorder(), primary: Colors.white70),
-                ),
-                Spacer(),
-                Text("Time"),
-                Spacer()
-              ])),
-              Spacer(),
-              Container(
-                  padding: EdgeInsets.all(4),
-                  //titleTextStyle: const TextStyle(fontSize: 50, fontFamily: "Cursive", color: Colors.black),
-                  child: tileGrid),
-              Spacer(),
-            ])));
+            //color: Colors.orangeAccent,
+            child: Container(
+                color: Colors.black26, //.fromRGBO(31, 27, 24, 1),
+                child: Column(children: [
+                  Spacer(),
+                  Container(
+                      child: const Text(
+                    "Minesweeper",
+                    style: TextStyle(
+                        fontFamily: "Calibri",
+                        color: Color.fromRGBO(83, 109, 123, 0.95),
+                        fontSize: 30),
+                  )),
+                  Spacer(),
+                  iPane,
+                  Spacer(),
+                  Container(
+                      padding: EdgeInsets.all(4),
+                      //titleTextStyle: const TextStyle(fontSize: 50, fontFamily: "Cursive", color: Colors.black),
+                      child: tileGrid),
+                  Spacer(),
+                ]))));
+  }
+
+  standard() {
+    var MaxWidth = MediaQuery.of(context).size.width;
+    var TileSize = MaxWidth * (1 / board.sizey) * 0.98;
   }
 
   gameOver(type) {
-    setState(() {
+    //type True when Game Win and False if Lose
+    for (var x = 0; x < sizex; x++) {
+      for (var y = 0; y < sizey; y++) {
+        if (board.vals[x][y] == '*') {
+          board.currVals[x][y] = '*';
+        }
+      }
+    }
+
+    board.tileGridKey.currentState!.refresh();
+    Future.delayed(Duration(seconds: 2)).then((_) {
       gameEndDialog(type);
     });
   }
 
   newgame() {
     setState(() {
-      _flagging = 0;
-      tilesRem = size * size;
-      board = BoardMatrix(size: size, mines: mines, sizex: sizex, sizey: sizey);
+      board = BoardMatrix(mines: mines, sizex: sizex, sizey: sizey);
+      iPane = InfoPane(
+        key: board.infoPaneKey,
+        board: board,
+      );
+      board.InfoPane = iPane;
       tileGrid = TileGrid(
-          size: size,
-          mines: mines,
-          vals: board.vals,
-          currVals: board.displayedVals,
-          gameOver: gameOver,
-          flagging: _flagging,
-          tiles_rem: tilesRem);
+        key: board.tileGridKey,
+        board: board,
+        gameOver: gameOver,
+      );
     });
   }
 }
 
 class BoardMatrix {
   List<List<String>> vals = [];
-  List<List<String>> displayedVals = [];
+  List<List<String>> currVals = [];
 
+  final GlobalKey<InfoPaneState> infoPaneKey = GlobalKey<InfoPaneState>();
+  final GlobalKey<TileGridState> tileGridKey = GlobalKey<TileGridState>();
   var mines = 0;
-  var size = 0;
   var sizex, sizey;
-  var flagging;
+  var flagging, tiles_rem, flagged;
+  var InfoPane;
 
-  BoardMatrix({this.size = 0, this.mines = 0, this.sizex = 0, this.sizey = 0}) {
+  BoardMatrix({this.mines = 0, this.sizex = 0, this.sizey = 0}) {
+    var NoMines = mines;
     for (var i = 0; i < sizex; i++) {
       List<String> temp = [];
       List<String> temp2 = [];
@@ -148,15 +139,15 @@ class BoardMatrix {
         temp2.add("");
       }
       vals.add(temp);
-      displayedVals.add(temp2);
+      currVals.add(temp2);
     }
     var rng = Random();
-    while (mines > 0) {
+    while (NoMines > 0) {
       var x = (rng.nextInt(sizex));
       var y = (rng.nextInt(sizey));
       if (vals[x][y] != '*') {
         vals[x][y] = '*';
-        mines--;
+        NoMines--;
       }
     }
 
@@ -166,7 +157,7 @@ class BoardMatrix {
           var cnt = 0;
           for (var m = -1; m < 2; m++) {
             for (var n = -1; n < 2; n++) {
-              if (i + m > -1 && j + n > -1 && i + m < size && j + n < size) {
+              if (i + m > -1 && j + n > -1 && i + m < sizex && j + n < sizey) {
                 if (vals[i + m][j + n] == '*') cnt++;
               }
             }
@@ -179,5 +170,68 @@ class BoardMatrix {
         }
       }
     }
+    tiles_rem = sizex * sizey;
+    flagging = 0;
+    flagged = mines;
+  }
+}
+
+class InfoPane extends StatefulWidget {
+  var board;
+
+  InfoPane({Key? key, this.board}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() {
+    return InfoPaneState();
+  }
+}
+
+class InfoPaneState extends State<InfoPane> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        child: Row(children: [
+      Image.asset(
+        "images/mine.ico",
+        height: 50,
+        width: 50,
+      ),
+      Text(
+        "${widget.board.flagged}",
+        style: TextStyle(fontSize: 30, color: Colors.white),
+      ),
+      Spacer(),
+      ElevatedButton(
+        onPressed: ChangeFlagging,
+        child: (widget.board.flagging == 1)
+            ? Image.asset(
+                "images/flag.ico",
+                height: 50,
+                width: 50,
+              )
+            : Image.asset(
+                "images/mine.ico",
+                height: 50,
+                width: 50,
+              ),
+        style: ElevatedButton.styleFrom(
+            shape: CircleBorder(), primary: Colors.white70),
+      ),
+    ]));
+  }
+
+  ChangeFlagging() {
+    setState(() {
+      widget.board.flagging += 1;
+      widget.board.flagging = (widget.board.flagging % 2);
+    });
+  }
+
+  refresh() {
+    print("Info Pane Refresh");
+    setState(() {
+      print(widget.board.flagged);
+    });
   }
 }

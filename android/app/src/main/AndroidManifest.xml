@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.mine">
    <application
-        android:label="mine"
+        android:label="Minesweeper"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 
+import 'package:mine/play.dart';
+
 main() => runApp(Tile());
 
 class Tile extends StatefulWidget {
   @override
   var x;
   var y;
-  var vals, type;
-  var currVals, flagging;
+  var type, board, flag, widget;
   var gameOver, showRecurse, reduceTile;
 
   Tile(
@@ -16,14 +17,12 @@ class Tile extends StatefulWidget {
       this.showRecurse,
       this.x = 0,
       this.y = 0,
-      this.vals,
-      this.currVals,
-      this.reduceTile,
-      this.flagging});
+      this.board,
+      this.reduceTile});
 
   normal() {
-    if (currVals[x][y] != vals[x][y]) {
-      currVals[x][y] = vals[x][y];
+    if (board.currVals[x][y] != board.vals[x][y]) {
+      board.currVals[x][y] = board.vals[x][y];
       reduceTile();
     }
     type = "Normal";
@@ -36,58 +35,74 @@ class Tile extends StatefulWidget {
 
 class TileState extends State<Tile> {
   click() {
-    print(widget.flagging);
-    if (widget.vals[widget.x][widget.y] == '*') {
+    if (widget.board.flagging == 1) {
       setState(() {
-        widget.currVals[widget.x][widget.y] = widget.vals[widget.x][widget.y];
-        widget.type = "Mine";
+        if (widget.board.currVals[widget.x][widget.y] == 'F') {
+          widget.board.currVals[widget.x][widget.y] = '';
+          widget.board.flagged += 1;
+        } else if (widget.board.currVals[widget.x][widget.y] == '' &&
+            widget.board.flagged > 0) {
+          widget.board.currVals[widget.x][widget.y] = 'F';
+          widget.board.flagged -= 1;
+        }
       });
-      //sleep(Duration(seconds: 5));
+      widget.board.infoPaneKey.currentState!.refresh();
+    } else if (widget.board.currVals[widget.x][widget.y] != 'F') {
+      setState(() {
+        if (widget.board.vals[widget.x][widget.y] == '*') {
+          widget.board.currVals[widget.x][widget.y] =
+              widget.board.vals[widget.x][widget.y];
+          widget.type = "Mine";
+          widget.gameOver(false);
+        } else if (widget.board.vals[widget.x][widget.y] != ' ') {
+          widget.normal();
+        } else {
+          widget.showRecurse(widget.x, widget.y);
+        }
+      });
     }
-    setState(() {
-      if (widget.vals[widget.x][widget.y] == '*') {
-        //var x = 0;
-        widget.gameOver(false);
-      } else if (widget.vals[widget.x][widget.y] != ' ') {
-        widget.normal();
-      } else {
-        widget.showRecurse(widget.x, widget.y);
-      }
-    });
+    print(widget.board.flagged);
   }
 
   var clr;
-  @override
-  void initState() {
-    clr = Colors.orangeAccent;
-
-    if (widget.currVals[widget.x][widget.y] == "") {
-      widget.type = "Not Touched";
-    } else if (widget.currVals[widget.x][widget.y] == "*") {
-      widget.type = "Mine";
-    } else {
-      widget.type = "Normal";
-    }
-    super.initState();
-  }
 
   @override
   build(context) {
-    if (widget.currVals[widget.x][widget.y] == "") {
+    if (widget.board.currVals[widget.x][widget.y] == "") {
       widget.type = "Not Touched";
-    } else if (widget.currVals[widget.x][widget.y] == "*") {
+    } else if (widget.board.currVals[widget.x][widget.y] == "*") {
       widget.type = "Mine";
+    } else if (widget.board.currVals[widget.x][widget.y] == "F") {
+      widget.type = "Flag";
     } else {
       widget.type = "Normal";
     }
     var MaxWidth = MediaQuery.of(context).size.width;
-    var TileSize = MaxWidth * 0.098;
+    var TileSize = MaxWidth * (1 / widget.board.sizey) * 0.98;
 
     if (widget.type == "Not Touched") {
-      clr = Colors.orangeAccent;
+      clr = Color.fromRGBO(31, 27, 24, 0.4);
+      widget.widget = Image.asset(
+        "images/tile.png",
+      );
     } else if (widget.type == "Normal") {
       clr = Colors.white;
+      widget.widget = Text(
+        widget.board.currVals[widget.x][widget.y],
+        style: TextStyle(color: Colors.black),
+      );
+    } else if (widget.type == "Flag") {
+      widget.widget = Image.asset(
+        "images/flag.ico",
+        //height: 100,
+        //width: 100,
+      );
     } else if (widget.type == "Mine") {
+      widget.widget = Image.asset(
+        "images/mine.ico",
+        //height: 100,
+        //width: 100,
+      );
       clr = Colors.redAccent;
     }
     return Container(
@@ -97,14 +112,11 @@ class TileState extends State<Tile> {
             width: TileSize, //width of button
             child: ElevatedButton(
               onPressed: () => {click()},
-              child: Text(
-                widget.currVals[widget.x][widget.y],
-                style: TextStyle(color: Colors.black),
-              ),
+              child: widget.widget,
               style: ElevatedButton.styleFrom(
-                  side: BorderSide(
-                      width: 1, color: Colors.brown), //border width and color
+                  //side: BorderSide(width: 1, color: Colors.brown), //border width and color
                   elevation: 3,
+                  padding: EdgeInsets.all(0.0),
                   primary: clr,
                   shape: ContinuousRectangleBorder()),
             )));

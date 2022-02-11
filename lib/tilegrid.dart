@@ -3,17 +3,10 @@ import 'package:flutter/services.dart';
 import './tile.dart';
 
 class TileGrid extends StatefulWidget {
-  var vals;
-  var currVals, size, mines, gameOver, flagging, tiles_rem;
+  var board;
+  var gameOver;
 
-  TileGrid(
-      {this.size,
-      this.mines,
-      this.vals,
-      this.currVals,
-      this.gameOver,
-      this.flagging,
-      this.tiles_rem});
+  TileGrid({Key? key, this.board, this.gameOver}) : super(key: key);
 
   @override
   createState() {
@@ -27,40 +20,43 @@ class TileGridState extends State<TileGrid> {
 
   @override
   void initState() {
-    widget.tiles_rem = widget.size * widget.size;
+    widget.board.tiles_rem = widget.board.sizex * widget.board.sizey;
     super.initState();
   }
 
   reduceTile() {
-    widget.tiles_rem = widget.tiles_rem - 1;
-    if (widget.tiles_rem < 0) widget.tiles_rem = 0;
+    widget.board.tiles_rem = widget.board.tiles_rem - 1;
+    if (widget.board.tiles_rem < 0) widget.board.tiles_rem = 0;
     gameWin();
   }
 
   gameWin() {
-    //print("K");
-    //print(widget.tiles_rem);
-    if (widget.tiles_rem == widget.mines) {
+    if (widget.board.tiles_rem == widget.board.mines) {
       widget.gameOver(true);
     }
+  }
+
+  refresh() {
+    print("Tile Grid State");
+    setState(() {});
+    print("Refreshed");
   }
 
   @override
   build(context) {
     row = [];
     btns = [];
-    for (var x = 0; x < widget.size; x++) {
+    for (var x = 0; x < widget.board.sizex; x++) {
       List<Tile> temp = [];
-      for (var y = 0; y < widget.size; y++) {
+      for (var y = 0; y < widget.board.sizey; y++) {
         temp.add(Tile(
-            gameOver: widget.gameOver,
-            x: x,
-            y: y,
-            vals: widget.vals,
-            currVals: widget.currVals,
-            showRecurse: showRecurse,
-            reduceTile: reduceTile,
-            flagging: widget.flagging));
+          gameOver: widget.gameOver,
+          x: x,
+          y: y,
+          board: widget.board,
+          showRecurse: showRecurse,
+          reduceTile: reduceTile,
+        ));
       }
       row.add(Row(
         children: [...temp],
@@ -72,20 +68,20 @@ class TileGridState extends State<TileGrid> {
 
   recureFun(x, y, visited) {
     if (visited[x][y] != 1) {
-      if (widget.vals[x][y] == ' ') {
+      if (widget.board.vals[x][y] == ' ') {
         visited[x][y] = 1;
         btns[x][y].normal();
         for (var m = -1; m < 2; m++) {
           for (var n = -1; n < 2; n++) {
             if (x + m > -1 &&
                 y + n > -1 &&
-                x + m < widget.size &&
-                y + n < widget.size) {
+                x + m < widget.board.sizex &&
+                y + n < widget.board.sizey) {
               recureFun(x + m, y + n, visited);
             }
           }
         }
-      } else if (widget.vals[x][y] != '*') {
+      } else if (widget.board.vals[x][y] != '*') {
         visited[x][y] = 1;
         btns[x][y].normal();
       }
@@ -94,14 +90,13 @@ class TileGridState extends State<TileGrid> {
 
   showRecurse(var x, var y) {
     var visited = [];
-    for (var i = 0; i < widget.size; i++) {
+    for (var i = 0; i < widget.board.sizex; i++) {
       var temp = [];
-      for (var j = 0; j < widget.size; j++) {
+      for (var j = 0; j < widget.board.sizey; j++) {
         temp.add(0);
       }
       visited.add(temp);
     }
-    //for (var i = 0; i < widget.size; i++) print(widget.currVals[i]);
 
     setState(() {
       recureFun(x, y, visited);
